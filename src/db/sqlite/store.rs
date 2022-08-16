@@ -31,6 +31,7 @@ impl Sqlite {
 
     pub fn new(path: String) -> Result<Sqlite> {
         let s = Sqlite::new_conn(path)?;
+        println!("create table");
         s.create_table()?;
         Ok(s)
     }
@@ -40,6 +41,7 @@ impl Sqlite {
             &path,
             sqlite::OpenFlags::new()
                 .set_full_mutex()
+                // .set_no_mutex()
                 .set_read_write()
                 .set_create(),
         )?;

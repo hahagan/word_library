@@ -1,3 +1,5 @@
+pub mod gui;
+
 use std::{collections::HashMap, fmt};
 
 #[derive(Debug)]
@@ -32,10 +34,21 @@ pub struct Error<E> {
     pub err: Option<E>,
 }
 
-impl<T: std::fmt::Debug> std::error::Error for Error<T> {}
-impl<T> fmt::Display for Error<T> {
+impl<T: std::fmt::Debug + fmt::Display> std::error::Error for Error<T> {}
+impl<T: fmt::Display> fmt::Display for Error<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
+        match &self.err {
+            Some(err) => {
+                write!(
+                    f,
+                    "msg: {}, code: {}, raw: {}",
+                    self.message, self.code, err
+                )
+            }
+            None => {
+                write!(f, "msg: {}, code: {}", self.message, self.code)
+            }
+        }
     }
 }
 
@@ -46,10 +59,21 @@ pub enum InternalError<E> {
     Unknow(Error<E>),
 }
 
-impl<E: std::fmt::Debug> std::error::Error for InternalError<E> {}
-impl<E> fmt::Display for InternalError<E> {
+impl<E: std::fmt::Debug + fmt::Display> std::error::Error for InternalError<E> {}
+impl<E: fmt::Display> fmt::Display for InternalError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "internal error")
+        match self {
+            InternalError::NotFound => {
+                return write!(f, "internal error for item not found");
+            }
+            InternalError::StoreNotFound => {
+                return write!(f, "internal error for item not found");
+            }
+            InternalError::Unknow(err) => {
+                return write!(f, "internal error for unknow {}", err);
+            }
+        }
+        // write!(f, "internal error")
     }
 }
 
@@ -170,7 +194,7 @@ mod tests {
         return res;
     }
 
-    #[test]
+    // #[test]
     fn clean_sqlite() {
         let k0 = "target/test.sql";
         let k1 = "target/test1.sql";
@@ -187,6 +211,16 @@ mod tests {
             name: String::from("test"),
             message: String::from("test"),
         };
+        if let Err(err) = wd.get_store("notstore") {
+            match err {
+                InternalError::StoreNotFound => {}
+                err => {
+                    panic!("{}", err)
+                }
+            }
+        } else {
+            panic!("should reuturn store not found error")
+        }
         wd.insert(&word, k0).unwrap();
         wd.move_to(&word.name, k0, k1).unwrap();
         wd.get(&word.name, k1).unwrap();
@@ -194,6 +228,6 @@ mod tests {
         wd.update(&word, k1).unwrap();
         wd.delete(&word.name, k1).unwrap();
 
-        clean_sqlite()
+        // clean_sqlite()
     }
 }
