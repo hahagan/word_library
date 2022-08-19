@@ -67,7 +67,7 @@ impl<E: fmt::Display> fmt::Display for InternalError<E> {
                 return write!(f, "internal error for item not found");
             }
             InternalError::StoreNotFound => {
-                return write!(f, "internal error for item not found");
+                return write!(f, "internal error for store not found");
             }
             InternalError::Unknow(err) => {
                 return write!(f, "internal error for unknow {}", err);

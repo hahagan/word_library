@@ -40,7 +40,7 @@ impl Sqlite {
         let con = Connection::open_with_flags(
             &path,
             sqlite::OpenFlags::new()
-                .set_full_mutex()
+                // .set_full_mutex()
                 // .set_no_mutex()
                 .set_read_write()
                 .set_create(),
@@ -252,6 +252,31 @@ mod tests {
         expect_notfound(sql.get(&word.name));
 
         clean_sqlite();
+    }
+
+    #[test]
+    fn gen_data() {
+        let sql = Sqlite::new(String::from("/mnt/d/big_test.sql")).unwrap();
+        let mut word = World {
+            name: String::from("test"),
+            message: String::from("test"),
+        };
+
+        let size = 1000;
+        let mut cost = std::time::Duration::new(0, 0);
+        for i in 0..size {
+            word.name = format!("test-{}", i);
+            let now = std::time::Instant::now();
+            sql.insert(&word).unwrap();
+            cost += now.elapsed();
+        }
+
+        println!("cost {}", cost.as_secs());
+
+        word.name = format!("test-big-message");
+        let content = std::fs::read("src/db/sqlite/store.rs").unwrap();
+        word.message = String::from_utf8(content).unwrap();
+        sql.insert(&word).unwrap();
     }
 
     #[test]
