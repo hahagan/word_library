@@ -62,7 +62,6 @@ impl APP {
                     let mut fs = fc.filenames();
                     while let Some(i) = fs.pop() {
                         let key = i.clone().into_os_string().into_string().unwrap();
-                        println!("open {}", key);
                         match dbstore::Sqlite::new(key.clone()) {
                             Ok(v) => {
                                 let index = &mut lib.borrow_mut().stores;
@@ -70,7 +69,11 @@ impl APP {
                             }
                             Err(err) => {
                                 // TODO add alter window
-                                println!("warn0 {}", err);
+                                let msg = format!(
+                                    "open the file fail, check the file format, error:{}",
+                                    err
+                                );
+                                fl::dialog::alert_default(&msg);
                                 return;
                             }
                         }
@@ -81,7 +84,6 @@ impl APP {
                         but.do_callback();
                     }
 
-                    println!("redraw tab");
                     // tab redraw is useless
                     tabs.parent().unwrap().redraw();
                 }
@@ -159,7 +161,11 @@ impl APP {
                         browser.show()
                     }
                     Err(err) => {
-                        println!("warn2 {}", err);
+                        let msg = format!(
+                            "get the library index from file fail, file: {}, err msg: {}",
+                            &key, err
+                        );
+                        fl::dialog::alert_default(&msg);
                         return;
                     }
                 }
@@ -245,7 +251,11 @@ impl APP {
                             // win.redraw();
                         }
                         Err(err) => {
-                            println!("get word for output fail, word: {}, err msg: {}", word, err);
+                            let msg = format!(
+                                "get the word from file fail, word: {}, err msg: {}",
+                                word, err
+                            );
+                            fl::dialog::alert_default(&msg);
                         }
                     }
                 }
@@ -280,20 +290,9 @@ impl APP {
                         };
 
                         if let Err(err) = lib.borrow().update(&word, &cur.borrow().store_key) {
-                            match err {
-                                store::InternalError::NotFound => {
-                                    if let Err(err) =
-                                        lib.borrow().insert(&word, &cur.borrow().store_key)
-                                    {
-                                        println!("save error: {}", err);
-                                        return;
-                                    }
-                                }
-                                err => {
-                                    println!("save error: {}", err);
-                                    return;
-                                }
-                            }
+                            let msg = format!("save doc error: {}", err);
+                            fl::dialog::alert_default(&msg);
+                            return;
                         }
                     }
                 }
@@ -308,6 +307,7 @@ impl APP {
                 let mut buffer = buffer.clone();
                 let lib = lib.clone();
                 let cur = cur.clone();
+                let mut index = index.clone();
                 move |_| {
                     if let Some(name) = fl::dialog::input_default("word key", "") {
                         let word = store::World {
@@ -316,7 +316,8 @@ impl APP {
                         };
 
                         if let Err(err) = lib.borrow().insert(&word, &cur.borrow().store_key) {
-                            println!("insert word error: {}", err);
+                            let msg = format!("new doc error: {}", err);
+                            fl::dialog::alert_default(&msg);
                             return;
                         }
 
@@ -324,6 +325,34 @@ impl APP {
                         index.add(&word.name);
                         index.select(index.size());
                         index.bottom_line(index.size());
+                    }
+                }
+            },
+        );
+
+        menu.add(
+            "Store/DeleteDoc",
+            fl::enums::Shortcut::Ctrl | fl::enums::Shortcut::from_char('d'),
+            fl::menu::MenuFlag::Normal,
+            {
+                let mut buffer = buffer.clone();
+                let lib = lib.clone();
+                let cur = cur.clone();
+                let mut index = index.clone();
+                move |_| {
+                    if let Some(word) = index.selected_text() {
+                        if let Err(err) = lib.borrow().delete(&word, &cur.borrow().store_key) {
+                            let msg = format!("delete word error: {}", err);
+                            fl::dialog::alert_default(&msg);
+                            return;
+                        }
+
+                        // buffer.set_text(&word.message);
+                        // index.add(&word.name);
+                        index.remove(index.value());
+                        index.select(0);
+                        // index.select(index.size());
+                        // index.bottom_line(index.size());
                     }
                 }
             },
